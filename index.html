@@ -1,0 +1,144 @@
+<!--Developed by Ibrahim Anouer-->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Molahadat - منصة الملاحظات الدراسية</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- شريط التنقل -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-book"></i>
+                <span>Molahadat</span>
+            </div>
+            
+            <div class="nav-user" id="navUser">
+                <!-- سيتم تعبئته بواسطة JavaScript -->
+            </div>
+        </div>
+    </nav>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="container">
+        <!-- قسم المواد الدراسية -->
+        <div class="subjects-section">
+            <div class="section-header">
+                <h2><i class="fas fa-book"></i> المواد الدراسية</h2>
+                <button class="btn-secondary" onclick="resetFilters()">
+                    <i class="fas fa-list"></i> عرض الكل
+                </button>
+            </div>
+            
+            <div class="subjects-grid" id="subjectsContainer">
+                <!-- المواد تظهر هنا -->
+            </div>
+            
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button class="add-subject-btn" onclick="addNewSubject()">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>إضافة مادة جديدة</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- إضافة ملاحظة -->
+        <div class="add-note-section">
+            <h2><i class="fas fa-plus-circle"></i> أضف ملاحظة جديدة</h2>
+            <div class="note-form">
+                <input type="text" id="noteTitle" placeholder="عنوان الملاحظة" class="form-input" required>
+                
+                <div class="form-group">
+                    <label for="noteSubject"><i class="fas fa-book"></i> اختر المادة</label>
+                    <div class="subject-select-container" id="subjectOptions">
+                        <!-- خيارات المواد كأزرار -->
+                    </div>
+                    <select id="noteSubject" class="form-select" style="margin-top: 10px;" required>
+                        <option value="">اختر المادة من القائمة</option>
+                        <!-- سيتم تعبئته بالجافاسكريبت -->
+                    </select>
+                </div>
+                
+                <textarea id="noteContent" placeholder="اكتب ملاحظتك هنا..." class="form-textarea" rows="6" required></textarea>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button onclick="addNote()" class="btn-primary">
+                        <i class="fas fa-paper-plane"></i> نشر الملاحظة
+                    </button>
+                    <button onclick="clearForm()" class="btn-secondary">
+                        <i class="fas fa-times"></i> مسح النموذج
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- عرض الملاحظات -->
+        <div class="notes-section">
+            <div class="section-header">
+                <h2><i class="fas fa-sticky-note"></i> أحدث الملاحظات</h2>
+                <div class="filters">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchNotes" placeholder="ابحث في الملاحظات..." class="search-input">
+                    </div>
+                    <select id="filterSubject" class="filter-select">
+                        <option value="">كل المواد</option>
+                        <!-- سيتم تعبئته بالجافاسكريبت -->
+                    </select>
+                    <select id="sortBy" class="filter-select">
+                        <option value="newest">الأحدث</option>
+                        <option value="oldest">الأقدم</option>
+                        <option value="mostLikes">الأكثر إعجاباً</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="notesList" class="notes-list">
+                <!-- الملاحظات تظهر هنا -->
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة تسجيل الدخول -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-logo">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <h2>مرحباً بك في منصة ملاحظاتنا</h2>
+                <p>أدخل اسمك للبدء</p>
+            </div>
+            
+            <div class="modal-body">
+                <div class="input-group">
+                    <label for="usernameInput">
+                        <i class="fas fa-user"></i> اسمك
+                    </label>
+                    <input type="text" id="usernameInput" placeholder="اكتب اسمك هنا" class="form-input" autofocus>
+                    <small style="color: #666; display: block; margin-top: 5px;">سيظهر هذا الاسم مع ملاحظاتك</small>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button onclick="saveUsername()" class="btn-primary">
+                    <i class="fas fa-check"></i> حفظ والدخول
+                </button>
+            </div>
+            
+            <div class="modal-footer">
+                <small style="color: #888;">يمكنك تغيير اسمك لاحقاً من شريط المستخدم</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- رسائل التنبيه -->
+    <div id="messageContainer"></div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
