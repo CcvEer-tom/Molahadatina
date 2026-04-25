@@ -1,13 +1,14 @@
 /* * ==========================================
  * Developed by Ibrahim Anouer
- * Platform: Molahadatna (Firebase Edition)
- * Version: 2.0.2 - Fixed
+ * Platform: Molahadatna (Firebase Edition with Auth)
+ * Version: 3.0.0 - مع المصادقة
  * ==========================================
  */
 
 // استيراد مكتبات Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth.js";
 
 // إعدادات الاتصال بقاعدة البيانات
 const firebaseConfig = {
@@ -24,12 +25,13 @@ const firebaseConfig = {
 // تهيئة Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
 const notesRef = ref(db, 'notes');
 
 // متغيرات النظام الأساسية
 let notes = [];
-let currentUser = '';
-let subjects = []; // ستصبح مصفوفة ديناميكية
+let currentUser = null;
+let currentDisplayName = '';
 
 // قائمة المواد الدراسية الأساسية
 const defaultSubjects = [
@@ -55,6 +57,8 @@ const defaultSubjects = [
     { id: 'music', name: 'موسيقى', icon: 'fas fa-music', color: '#8b5cf6' }
 ];
 
+let subjects = [];
+
 // تحميل المواد المحفوظة من localStorage
 function loadSubjects() {
     const saved = localStorage.getItem('subjects');
@@ -71,61 +75,166 @@ function saveSubjects() {
 }
 
 // ==========================================
-// الوظائف العامة (متاحة عالمياً)
+// وظائف المصادقة (Authentication)
 // ==========================================
 
-window.initApp = function() {
-    console.log("🚀 نظام الملاحظات يعمل...");
-    loadSubjects();
-    currentUser = localStorage.getItem('currentUser') || '';
-    
-    // تحديث القوائم والواجهات
-    updateSubjectSelect();
-    displaySubjectButtons();
-    displaySubjects();
-    setupEventListeners();
-    
-    if (!currentUser) {
-        setTimeout(showLoginModal, 500);
-    } else {
-        updateNavUser();
-    }
-
-    // الاستماع لقاعدة البيانات (بث حي)
-    onValue(notesRef, (snapshot) => {
-        const data = snapshot.val();
-        notes = [];
-        if (data) {
-            Object.keys(data).forEach(key => {
-                notes.push({ id: key, ...data[key] });
-            });
-            notes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        }
-        displayNotes();
-        displaySubjects(); // تحديث عدد الملاحظات لكل مادة
-    });
+window.showLoginTab = function() {
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('registerForm').style.display = 'none';
+    document.getElementById('loginTabBtn').style.color = '#4f46e5';
+    document.getElementById('loginTabBtn').style.borderBottom = '3px solid #4f46e5';
+    document.getElementById('registerTabBtn').style.color = '#64748b';
+    document.getElementById('registerTabBtn').style.borderBottom = 'none';
+    document.getElementById('loginBtn').style.display = 'block';
+    document.getElementById('registerBtn').style.display = 'none';
 };
+
+window.showRegisterTab = function() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('registerForm').style.display = 'block';
+    document.getElementById('registerTabBtn').style.color = '#4f46e5';
+    document.getElementById('registerTabBtn').style.borderBottom = '3px solid #4f46e5';
+    document.getElementById('loginTabBtn').style.color = '#64748b';
+    document.getElementById('loginTabBtn').style.borderBottom = 'none';
+    document.getElementById('loginBtn').style.display = 'none';
+    document.getElementById('registerBtn').style.display = 'block';
+};
+
+// تسجيل الدخول
+window.loginWithEmail = function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!email || !password) {
+        showMessage("❌ الرجاء إدخال البريد الإلكتروني وكلمة المرور", "error");
+        return;
+    }
+    
+    showMessage("⏳ جاري تسجيل الدخول...", "success");
+    
+    signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+            const user = userCredential.user;
+            currentDisplayName = user.displayName || user.email.split('@')[0];
+            showMessage(`✅ مرحباً بك ${currentDisplayName}`, "success");
+            document.getElementById('loginModal').style.display = 'none';
+        })
+        .catch((error) => {
+            let msg = "";
+            if (error.code === 'auth/invalid-credential') {
+                msg = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
+            } else if (error.code === 'auth/user-not-found') {
+                msg = "لا يوجد حساب بهذا البريد";
+            } else if (error.code === 'auth/wrong-password') {
+                msg = "كلمة المرور غير صحيحة";
+            } else {
+                msg = error.message;
+            }
+            showMessage("❌ " + msg, "error");
+        });
+};
+
+// إنشاء حساب جديد
+window.registerUser = function() {
+    const email = document.getElementById('registerEmail').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const displayName = document.getElementById('registerDisplayName').value.trim();
+    
+    if (!email || !password) {
+        showMessage("❌ الرجاء إدخال البريد الإلكتروني وكلمة المرور", "error");
+        return;
+    }
+    
+    if (password.length < 6) {
+        showMessage("❌ كلمة المرور يجب أن تكون 6 أحرف على الأقل", "error");
+        return;
+    }
+    
+    showMessage("⏳ جاري إنشاء الحساب...", "success");
+    
+    createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+            const user = userCredential.user;
+            const nameToSave = displayName || user.email.split('@')[0];
+            
+            // تحديث الاسم المعروض
+            updateProfile(user, { displayName: nameToSave }).then(() => {
+                currentDisplayName = nameToSave;
+                showMessage(`✅ تم إنشاء الحساب بنجاح! مرحباً ${nameToSave}`, "success");
+                document.getElementById('loginModal').style.display = 'none';
+            });
+        })
+        .catch((error) => {
+            let msg = "";
+            if (error.code === 'auth/email-already-in-use') {
+                msg = "هذا البريد الإلكتروني مسجل بالفعل";
+            } else if (error.code === 'auth/weak-password') {
+                msg = "كلمة المرور ضعيفة جداً";
+            } else if (error.code === 'auth/invalid-email') {
+                msg = "البريد الإلكتروني غير صحيح";
+            } else {
+                msg = error.message;
+            }
+            showMessage("❌ " + msg, "error");
+        });
+};
+
+// تسجيل الخروج
+window.logout = function() {
+    if (confirm("هل تريد تسجيل الخروج؟")) {
+        signOut(auth).then(() => {
+            showMessage("👋 تم تسجيل الخروج", "success");
+        });
+    }
+};
+
+// مراقبة حالة تسجيل الدخول
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user;
+        currentDisplayName = user.displayName || user.email.split('@')[0];
+        localStorage.setItem('currentUser', currentDisplayName);
+        updateNavUser();
+        
+        // تحميل البيانات بعد تسجيل الدخول
+        loadSubjects();
+        updateSubjectSelect();
+        displaySubjectButtons();
+        displaySubjects();
+        setupEventListeners();
+        
+        // الاستماع لقاعدة البيانات
+        onValue(notesRef, (snapshot) => {
+            const data = snapshot.val();
+            notes = [];
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    notes.push({ id: key, ...data[key] });
+                });
+                notes.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            }
+            displayNotes();
+            displaySubjects();
+        });
+    } else {
+        currentUser = null;
+        updateNavUser();
+        showLoginModal();
+    }
+});
+
+// ==========================================
+// وظائف التطبيق الأساسية
+// ==========================================
 
 window.showLoginModal = function() {
     const modal = document.getElementById('loginModal');
     if (modal) modal.style.display = 'flex';
 };
 
-window.saveUsername = function() {
-    const input = document.getElementById('usernameInput');
-    const name = input.value.trim();
-    if (name.length >= 2) {
-        currentUser = name;
-        localStorage.setItem('currentUser', name);
-        document.getElementById('loginModal').style.display = 'none';
-        updateNavUser();
-        showMessage(`مرحباً بك ${name}`, 'success');
-    } else {
-        showMessage('الاسم يجب أن يكون حرفين على الأقل', 'error');
-    }
-};
-
 window.addNewSubject = function() {
+    if (!currentUser) { showLoginModal(); return; }
+    
     const newName = prompt("📚 أدخل اسم المادة الجديدة:");
     if (newName && newName.trim()) {
         const check = subjects.find(s => s.name === newName.trim());
@@ -149,6 +258,8 @@ window.addNewSubject = function() {
 };
 
 window.addNote = function() {
+    if (!currentUser) { showLoginModal(); return; }
+    
     const titleObj = document.getElementById('noteTitle');
     const subjectObj = document.getElementById('noteSubject');
     const contentObj = document.getElementById('noteContent');
@@ -157,7 +268,6 @@ window.addNote = function() {
     const subject = subjectObj.value;
     const content = contentObj.value.trim();
 
-    if (!currentUser) { showLoginModal(); return; }
     if (!title || !subject || !content) {
         showMessage("❌ الرجاء ملء جميع الحقول!", "error");
         return;
@@ -169,7 +279,8 @@ window.addNote = function() {
         title: title,
         subject: subject,
         content: content,
-        author: currentUser,
+        author: currentDisplayName,
+        authorEmail: currentUser.email,
         subjectIcon: subData.icon,
         subjectColor: subData.color,
         date: new Date().toLocaleDateString('ar-MA'),
@@ -226,13 +337,15 @@ window.displayNotes = function() {
             <p class="note-text">${escapeHtml(n.content).replace(/\n/g, '<br>')}</p>
             <div class="note-footer">
                 <button onclick="window.likeNote('${n.id}')" class="btn-like">❤️ ${n.likes || 0}</button>
-                ${n.author === currentUser ? `<button onclick="window.deleteNote('${n.id}')" class="btn-del">🗑️ حذف</button>` : ''}
+                ${n.authorEmail === currentUser?.email ? `<button onclick="window.deleteNote('${n.id}')" class="btn-del">🗑️ حذف</button>` : ''}
             </div>
         </div>
     `).join('');
 };
 
 window.likeNote = function(id) {
+    if (!currentUser) { showLoginModal(); return; }
+    
     const note = notes.find(n => n.id === id);
     if (note) {
         update(ref(db, `notes/${id}`), { likes: (note.likes || 0) + 1 });
@@ -241,6 +354,8 @@ window.likeNote = function(id) {
 };
 
 window.deleteNote = function(id) {
+    if (!currentUser) { showLoginModal(); return; }
+    
     if (confirm("🗑️ هل أنت متأكد من حذف هذه الملاحظة؟")) {
         remove(ref(db, `notes/${id}`)).then(() => {
             showMessage("✅ تم حذف الملاحظة", "success");
@@ -266,7 +381,6 @@ window.clearForm = function() {
     document.getElementById('noteContent').value = '';
     document.getElementById('noteSubject').value = '';
     
-    // إلغاء تحديد الأزرار النشطة
     document.querySelectorAll('.subject-option').forEach(el => {
         el.classList.remove('active');
     });
@@ -314,7 +428,6 @@ function displaySubjects() {
     const container = document.getElementById('subjectsContainer');
     if (!container) return;
     
-    // حساب عدد الملاحظات لكل مادة
     const counts = {};
     notes.forEach(n => {
         counts[n.subject] = (counts[n.subject] || 0) + 1;
@@ -335,8 +448,6 @@ window.filterBySubject = function(name) {
         filterEl.value = name;
         displayNotes();
         showMessage(`🔍 عرض ملاحظات مادة: ${name}`, "success");
-        
-        // تمرير سلس إلى قسم الملاحظات
         document.querySelector('.notes-section')?.scrollIntoView({ behavior: 'smooth' });
     }
 };
@@ -344,21 +455,19 @@ window.filterBySubject = function(name) {
 function updateNavUser() {
     const nav = document.getElementById('navUser');
     if (nav) {
-        nav.innerHTML = `
-            <div class="user-pill">
-                <span>👤 ${escapeHtml(currentUser)}</span>
-                <button onclick="window.logout()">🚪 خروج</button>
-            </div>
-        `;
+        if (currentUser) {
+            nav.innerHTML = `
+                <div class="user-pill">
+                    <span>👤 ${escapeHtml(currentDisplayName)}</span>
+                    <span style="font-size: 0.7rem; opacity: 0.8;">📧 ${escapeHtml(currentUser.email)}</span>
+                    <button onclick="window.logout()">🚪 خروج</button>
+                </div>
+            `;
+        } else {
+            nav.innerHTML = `<button onclick="window.showLoginModal()" class="btn-secondary" style="background:white; color:#4f46e5;">🔐 تسجيل الدخول</button>`;
+        }
     }
 }
-
-window.logout = function() {
-    if (confirm("هل تريد تسجيل الخروج؟")) {
-        localStorage.removeItem('currentUser');
-        location.reload();
-    }
-};
 
 function showMessage(msg, type) {
     const box = document.getElementById('messageContainer');
@@ -381,7 +490,6 @@ function setupEventListeners() {
     if (sortSelect) sortSelect.addEventListener('change', () => displayNotes());
 }
 
-// وظيفة للحماية من الـ XSS
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
@@ -389,10 +497,8 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// إضافة بعض الوظائف المساعدة
-window.highlightSelectedSubject = function() {
-    // تم إلغاء هذه الوظيفة لأنها غير ضرورية
-};
-
 // انطلاق التطبيق
-document.addEventListener('DOMContentLoaded', window.initApp);
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("🚀 نظام الملاحظات يعمل مع المصادقة...");
+    showLoginModal();
+});
