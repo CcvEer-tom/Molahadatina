@@ -1,51 +1,90 @@
-<!--developed by Ibrahim Anouer-->
+<!--Developed by Ibrahim Anouer-->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Molahadatina</title>
+    <title>Molahadat - منصة الملاحظات الدراسية</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
+    <!-- شريط التنقل -->
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-logo">
                 <i class="fas fa-book"></i>
                 <span>Molahadat</span>
             </div>
-            <div class="nav-user" id="navUser"></div>
+            <div class="nav-actions">
+                <button onclick="toggleDarkMode()" class="dark-mode-btn" id="darkModeToggle">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <div class="nav-user" id="navUser"></div>
+            </div>
         </div>
     </nav>
 
     <div class="container">
-        <!-- المواد -->
+        <!-- قسم المواد الدراسية -->
         <div class="subjects-section">
             <div class="section-header">
                 <h2><i class="fas fa-book"></i> المواد الدراسية</h2>
-                <button class="btn-secondary" onclick="resetFilters()">عرض الكل</button>
+                <button class="btn-secondary" onclick="resetFilters()">
+                    <i class="fas fa-list"></i> عرض الكل
+                </button>
             </div>
             <div class="subjects-grid" id="subjectsContainer"></div>
-            <button class="add-subject-btn" onclick="addNewSubject()">➕ إضافة مادة</button>
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button class="add-subject-btn" onclick="addNewSubject()">
+                    <i class="fas fa-plus-circle"></i> إضافة مادة جديدة
+                </button>
+            </div>
         </div>
 
         <!-- إضافة ملاحظة -->
         <div class="add-note-section">
-            <h2>📝 ملاحظة جديدة</h2>
-            <input type="text" id="noteTitle" placeholder="العنوان" class="form-input">
-            <select id="noteSubject" class="form-select"></select>
-            <textarea id="noteContent" placeholder="نص الملاحظة..." class="form-textarea" rows="5"></textarea>
-            <button onclick="addNote()" class="btn-primary">📤 نشر</button>
-            <button onclick="clearForm()" class="btn-secondary">🗑️ مسح</button>
+            <h2><i class="fas fa-plus-circle"></i> أضف ملاحظة جديدة</h2>
+            <div class="note-form">
+                <input type="text" id="noteTitle" placeholder="عنوان الملاحظة" class="form-input">
+                
+                <div class="form-group">
+                    <label><i class="fas fa-book"></i> اختر المادة</label>
+                    <div class="subject-select-container" id="subjectOptions"></div>
+                    <select id="noteSubject" class="form-select" style="margin-top: 10px;"></select>
+                </div>
+                
+                <textarea id="noteContent" placeholder="اكتب ملاحظتك هنا..." class="form-textarea" rows="6"></textarea>
+                
+                <!-- رفع الصور -->
+                <div class="image-upload-section">
+                    <label class="image-upload-label">
+                        <i class="fas fa-image"></i> أضف صورة
+                        <input type="file" id="noteImage" accept="image/*" style="display: none;" onchange="previewImage(event)">
+                    </label>
+                    <div id="imagePreview" class="image-preview"></div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button onclick="addNote()" class="btn-primary">
+                        <i class="fas fa-paper-plane"></i> نشر الملاحظة
+                    </button>
+                    <button onclick="clearForm()" class="btn-secondary">
+                        <i class="fas fa-times"></i> مسح النموذج
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <!-- الملاحظات -->
+        <!-- عرض الملاحظات -->
         <div class="notes-section">
             <div class="section-header">
-                <h2>📋 جميع الملاحظات</h2>
+                <h2><i class="fas fa-sticky-note"></i> أحدث الملاحظات</h2>
                 <div class="filters">
-                    <input type="text" id="searchNotes" placeholder="🔍 بحث..." class="search-input">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchNotes" placeholder="ابحث في الملاحظات..." class="search-input">
+                    </div>
                     <select id="filterSubject" class="filter-select"></select>
                     <select id="sortBy" class="filter-select">
                         <option value="newest">الأحدث</option>
@@ -58,14 +97,33 @@
         </div>
     </div>
 
-    <!-- نافذة اسم المستخدم (بسيطة) -->
+    <!-- نافذة تسجيل الدخول (تصميم أنيق) -->
     <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <i class="fas fa-user-circle" style="font-size: 4rem; color: #4f46e5;"></i>
-            <h2>مرحباً بك</h2>
-            <p>أدخل اسمك للبدء</p>
-            <input type="text" id="usernameInput" placeholder="اسمك" class="form-input">
-            <button onclick="saveUsername()" class="btn-primary">دخول</button>
+        <div class="modal-content elegant-modal">
+            <div class="modal-decoration">
+                <div class="modal-decoration-circle"></div>
+                <div class="modal-decoration-circle2"></div>
+            </div>
+            <div class="modal-logo">
+                <i class="fas fa-pen-fancy"></i>
+            </div>
+            <h2>مرحباً بك في <span>Molahadat</span></h2>
+            <p>منصة ملاحظاتك الدراسية الذكية</p>
+            
+            <div class="input-group elegant-input">
+                <i class="fas fa-user"></i>
+                <input type="text" id="usernameInput" placeholder="اسم المستخدم" autocomplete="off">
+            </div>
+            
+            <button onclick="saveUsername()" class="btn-elegant">
+                <span>ابدأ الآن</span>
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            
+            <div class="modal-footer-note">
+                <i class="fas fa-lightbulb"></i>
+                <span>سيظهر هذا الاسم مع ملاحظاتك</span>
+            </div>
         </div>
     </div>
 
