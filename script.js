@@ -1,23 +1,25 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
 import { getDatabase, ref, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-storage.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyBkh7Mp-ixAnlQbERW5f4FYDhFEDN8q2zk",
     authDomain: "molahadatma.firebaseapp.com",
     databaseURL: "https://molahadatma-default-rtdb.firebaseio.com",
     projectId: "molahadatma",
+    storageBucket: "molahadatma.firebasestorage.app",
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const storage = getStorage(app);
 const notesRef = ref(db, 'notes');
 
 let notes = [];
 let currentUser = "";
+let currentImageFile = null;
 
-// ============================================
-// المواد الدراسية (حسب طلبك)
-// ============================================
+// المواد الدراسية
 const subjects = [
     { name: "التربية البدنية", icon: "fa-futbol", color: "#10b981" },
     { name: "علوم الحياة والأرض", icon: "fa-leaf", color: "#84cc16" },
@@ -38,10 +40,16 @@ document.addEventListener("DOMContentLoaded", () => {
     updateSelects();
     showSubjects();
     
+    // التحقق من الوضع الليلي
+    if (localStorage.getItem("darkMode") === "enabled") {
+        document.body.classList.add("dark-mode");
+        document.getElementById("darkModeToggle").innerHTML = '<i class="fas fa-sun"></i>';
+    }
+    
     if (!currentUser) {
         document.getElementById("loginModal").style.display = "flex";
     } else {
-        document.getElementById("navUser").innerHTML = `<div class="user-pill">👤 ${currentUser} <button onclick="logout()">خروج</button></div>`;
+        updateNavUser();
     }
     
     onValue(notesRef, (snapshot) => {
@@ -55,17 +63,55 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
+// الوضع الليلي
+window.toggleDarkMode = function() {
+    document.body.classList.toggle("dark-mode");
+    const btn = document.getElementById("darkModeToggle");
+    if (document.body.classList.contains("dark-mode")) {
+        btn.innerHTML = '<i class="fas fa-sun"></i>';
+        localStorage.setItem("darkMode", "enabled");
+    } else {
+        btn.innerHTML = '<i class="fas fa-moon"></i>';
+        localStorage.setItem("darkMode", "disabled");
+    }
+};
+
+// معاينة الصورة
+window.previewImage = function(event) {
+    const file = event.target.files[0];
+    if (file) {
+        currentImageFile = file;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById("imagePreview").innerHTML = `<img src="${e.target.result}" alt="معاينة">`;
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+// حفظ اسم المستخدم
 window.saveUsername = function() {
     const name = document.getElementById("usernameInput").value.trim();
     if (name.length < 2) {
-        alert("الاسم قصير جداً");
+        showMessage("الاسم قصير جداً", "error");
         return;
     }
     currentUser = name;
     localStorage.setItem("currentUser", name);
     document.getElementById("loginModal").style.display = "none";
-    document.getElementById("navUser").innerHTML = `<div class="user-pill">👤 ${name} <button onclick="logout()">خروج</button></div>`;
+    updateNavUser();
+    showMessage(`مرحباً بك ${name}`, "success");
 };
+
+function updateNavUser() {
+    document.getElementById("navUser").innerHTML = `
+        <div class="user-pill">
+            <i class="fas fa-user-circle"></i>
+            <span>${currentUser}</span>
+            <button onclick="logout()">خروج</button>
+        </div>
+    `;
+}
 
 window.logout = function() {
     localStorage.removeItem("currentUser");
@@ -77,7 +123,19 @@ function updateSelects() {
     subjects.forEach(s => options += `<option value="${s.name}">${s.name}</option>`);
     document.getElementById("noteSubject").innerHTML = options;
     document.getElementById("filterSubject").innerHTML = '<option value="">كل المواد</option>' + options;
+    
+    // أزرار المواد
+    document.getElementById("subjectOptions").innerHTML = subjects.map(s => `
+        <div class="subject-option" onclick="selectSubject('${s.name}')" style="border-color:${s.color}">
+            <i class="fas ${s.icon}" style="color:${s.color}"></i>
+            <span>${s.name}</span>
+        </div>
+    `).join('');
 }
+
+window.selectSubject = function(name) {
+    document.getElementById("noteSubject").value = name;
+};
 
 function showSubjects() {
     const counts = {};
@@ -102,13 +160,11 @@ window.addNewSubject = function() {
         });
         updateSelects();
         showSubjects();
-        showMessage(`✅ تمت إضافة مادة: ${newName}`, "success");
-    } else if (newName) {
-        showMessage("⚠️ المادة موجودة بالفعل", "error");
+        showMessage(`✅ تمت إضافة: ${newName}`, "success");
     }
 };
 
-window.addNote = function() {
+window.addNote = async function() {
     if (!currentUser) {
         document.getElementById("loginModal").style.display = "flex";
         return;
@@ -123,9 +179,18 @@ window.addNote = function() {
         return;
     }
     
+    let imageUrl = "";
+    
+    // رفع الصورة إذا وجدت
+    if (currentImageFile) {
+        const imageRef = storageRef(storage, `images/${Date.now()}_${currentImageFile.name}`);
+        const uploadResult = await uploadBytes(imageRef, currentImageFile);
+        imageUrl = await getDownloadURL(uploadResult.ref);
+    }
+    
     const sub = subjects.find(s => s.name === subject);
-    push(notesRef, {
-        title, subject, content,
+    await push(notesRef, {
+        title, subject, content, imageUrl,
         author: currentUser,
         icon: sub?.icon || "fa-book",
         color: sub?.color || "#6b7280",
@@ -136,7 +201,9 @@ window.addNote = function() {
     
     document.getElementById("noteTitle").value = "";
     document.getElementById("noteContent").value = "";
-    showMessage("✅ تم نشر الملاحظة بنجاح!", "success");
+    document.getElementById("imagePreview").innerHTML = "";
+    currentImageFile = null;
+    showMessage("✅ تم نشر الملاحظة!", "success");
 };
 
 window.showNotes = function() {
@@ -167,6 +234,7 @@ window.showNotes = function() {
             </div>
             <div class="note-meta">👤 ${escapeHtml(n.author)} | 📅 ${n.date}</div>
             <p class="note-text">${escapeHtml(n.content).replace(/\n/g, "<br>")}</p>
+            ${n.imageUrl ? `<img src="${n.imageUrl}" class="note-image" alt="صورة">` : ''}
             <div class="note-footer">
                 <button onclick="likeNote('${n.id}')" class="btn-like">❤️ ${n.likes || 0}</button>
                 ${n.author === currentUser ? `<button onclick="deleteNote('${n.id}')" class="btn-del">🗑️ حذف</button>` : ''}
@@ -186,16 +254,21 @@ function escapeHtml(text) {
 }
 
 window.likeNote = (id) => update(ref(db, `notes/${id}`), { likes: (notes.find(n => n.id === id)?.likes || 0) + 1 });
-window.deleteNote = (id) => { if(confirm("🗑️ هل تريد حذف هذه الملاحظة؟")) remove(ref(db, `notes/${id}`)); };
+window.deleteNote = (id) => { if(confirm("🗑️ حذف؟")) remove(ref(db, `notes/${id}`)); };
 window.filterBySubject = (name) => { document.getElementById("filterSubject").value = name; showNotes(); };
 window.resetFilters = () => { document.getElementById("searchNotes").value = ""; document.getElementById("filterSubject").value = ""; showNotes(); };
-window.clearForm = () => { document.getElementById("noteTitle").value = ""; document.getElementById("noteContent").value = ""; };
+window.clearForm = () => { 
+    document.getElementById("noteTitle").value = ""; 
+    document.getElementById("noteContent").value = ""; 
+    document.getElementById("imagePreview").innerHTML = "";
+    currentImageFile = null;
+};
 
 function showMessage(msg, type) {
     const box = document.getElementById("messageContainer");
     const toast = document.createElement("div");
     toast.className = `toast ${type}`;
-    toast.innerText = msg;
+    toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${msg}`;
     box.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
 }
