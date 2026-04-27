@@ -1,94 +1,52 @@
-<!--Developed by Ibrahim Anouer-->
+<!--developed by Ibrahim Anouer-->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Molahadat - منصة الملاحظات الدراسية</title>
+    <title>Molahadatina</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- شريط التنقل -->
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-logo">
                 <i class="fas fa-book"></i>
                 <span>Molahadat</span>
             </div>
-            
-            <div class="nav-user" id="navUser">
-                <!-- سيتم تعبئته بواسطة JavaScript -->
-            </div>
+            <div class="nav-user" id="navUser"></div>
         </div>
     </nav>
 
-    <!-- المحتوى الرئيسي -->
     <div class="container">
-        <!-- قسم المواد الدراسية -->
+        <!-- المواد -->
         <div class="subjects-section">
             <div class="section-header">
                 <h2><i class="fas fa-book"></i> المواد الدراسية</h2>
-                <button class="btn-secondary" onclick="resetFilters()">
-                    <i class="fas fa-list"></i> عرض الكل
-                </button>
+                <button class="btn-secondary" onclick="resetFilters()">عرض الكل</button>
             </div>
-            
-            <div class="subjects-grid" id="subjectsContainer">
-                <!-- المواد تظهر هنا -->
-            </div>
-            
-            <div style="text-align: center; margin-top: 1.5rem;">
-                <button class="add-subject-btn" onclick="addNewSubject()">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>إضافة مادة جديدة</span>
-                </button>
-            </div>
+            <div class="subjects-grid" id="subjectsContainer"></div>
+            <button class="add-subject-btn" onclick="addNewSubject()">➕ إضافة مادة</button>
         </div>
 
         <!-- إضافة ملاحظة -->
         <div class="add-note-section">
-            <h2><i class="fas fa-plus-circle"></i> أضف ملاحظة جديدة</h2>
-            <div class="note-form">
-                <input type="text" id="noteTitle" placeholder="عنوان الملاحظة" class="form-input" required>
-                
-                <div class="form-group">
-                    <label><i class="fas fa-book"></i> اختر المادة</label>
-                    <div class="subject-select-container" id="subjectOptions">
-                        <!-- خيارات المواد كأزرار -->
-                    </div>
-                    <select id="noteSubject" class="form-select" style="margin-top: 10px;" required>
-                        <option value="">اختر المادة من القائمة</option>
-                        <!-- سيتم تعبئته بالجافاسكريبت -->
-                    </select>
-                </div>
-                
-                <textarea id="noteContent" placeholder="اكتب ملاحظتك هنا..." class="form-textarea" rows="6" required></textarea>
-                
-                <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button onclick="addNote()" class="btn-primary">
-                        <i class="fas fa-paper-plane"></i> نشر الملاحظة
-                    </button>
-                    <button onclick="clearForm()" class="btn-secondary">
-                        <i class="fas fa-times"></i> مسح النموذج
-                    </button>
-                </div>
-            </div>
+            <h2>📝 ملاحظة جديدة</h2>
+            <input type="text" id="noteTitle" placeholder="العنوان" class="form-input">
+            <select id="noteSubject" class="form-select"></select>
+            <textarea id="noteContent" placeholder="نص الملاحظة..." class="form-textarea" rows="5"></textarea>
+            <button onclick="addNote()" class="btn-primary">📤 نشر</button>
+            <button onclick="clearForm()" class="btn-secondary">🗑️ مسح</button>
         </div>
 
-        <!-- عرض الملاحظات -->
+        <!-- الملاحظات -->
         <div class="notes-section">
             <div class="section-header">
-                <h2><i class="fas fa-sticky-note"></i> أحدث الملاحظات</h2>
+                <h2>📋 جميع الملاحظات</h2>
                 <div class="filters">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="searchNotes" placeholder="ابحث في الملاحظات..." class="search-input">
-                    </div>
-                    <select id="filterSubject" class="filter-select">
-                        <option value="">كل المواد</option>
-                        <!-- سيتم تعبئته بالجافاسكريبت -->
-                    </select>
+                    <input type="text" id="searchNotes" placeholder="🔍 بحث..." class="search-input">
+                    <select id="filterSubject" class="filter-select"></select>
                     <select id="sortBy" class="filter-select">
                         <option value="newest">الأحدث</option>
                         <option value="oldest">الأقدم</option>
@@ -96,78 +54,22 @@
                     </select>
                 </div>
             </div>
-
-            <div id="notesList" class="notes-list">
-                <!-- الملاحظات تظهر هنا -->
-            </div>
+            <div id="notesList" class="notes-list"></div>
         </div>
     </div>
 
-    <!-- نافذة تسجيل الدخول / إنشاء حساب -->
+    <!-- نافذة اسم المستخدم (بسيطة) -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <div class="modal-logo">
-                    <i class="fas fa-book-open"></i>
-                </div>
-                <h2>مرحباً بك في منصة ملاحظاتنا</h2>
-                <p>سجل دخولك أو أنشئ حساباً جديداً</p>
-            </div>
-            
-            <div class="modal-body">
-                <!-- علامات التبويب -->
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0;">
-                    <button onclick="showLoginTab()" id="loginTabBtn" style="flex:1; padding: 10px; background: none; border: none; cursor: pointer; font-weight: bold; color: #4f46e5; border-bottom: 3px solid #4f46e5;">تسجيل الدخول</button>
-                    <button onclick="showRegisterTab()" id="registerTabBtn" style="flex:1; padding: 10px; background: none; border: none; cursor: pointer; font-weight: bold; color: #64748b;">إنشاء حساب</button>
-                </div>
-
-                <!-- نموذج تسجيل الدخول -->
-                <div id="loginForm">
-                    <div class="input-group">
-                        <label><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
-                        <input type="email" id="loginEmail" placeholder="example@email.com" class="form-input">
-                    </div>
-                    <div class="input-group">
-                        <label><i class="fas fa-lock"></i> كلمة المرور</label>
-                        <input type="password" id="loginPassword" placeholder="********" class="form-input">
-                    </div>
-                </div>
-
-                <!-- نموذج إنشاء حساب -->
-                <div id="registerForm" style="display: none;">
-                    <div class="input-group">
-                        <label><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
-                        <input type="email" id="registerEmail" placeholder="example@email.com" class="form-input">
-                    </div>
-                    <div class="input-group">
-                        <label><i class="fas fa-lock"></i> كلمة المرور</label>
-                        <input type="password" id="registerPassword" placeholder="****** (6 أحرف على الأقل)" class="form-input">
-                    </div>
-                    <div class="input-group">
-                        <label><i class="fas fa-user"></i> اسم المستخدم (للظهور)</label>
-                        <input type="text" id="registerDisplayName" placeholder="الاسم الذي سيظهر مع ملاحظاتك" class="form-input">
-                    </div>
-                </div>
-            </div>
-            
-            <div class="modal-buttons">
-                <button onclick="loginWithEmail()" id="loginBtn" class="btn-primary" style="width: 100%;">
-                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-                </button>
-                <button onclick="registerUser()" id="registerBtn" style="display: none; width: 100%;" class="btn-primary">
-                    <i class="fas fa-user-plus"></i> إنشاء حساب
-                </button>
-            </div>
-            
-            <div class="modal-footer">
-                <small style="color: #888;">بعد تسجيل الدخول، ستتمكن من إضافة وحذف ملاحظاتك</small>
-            </div>
+            <i class="fas fa-user-circle" style="font-size: 4rem; color: #4f46e5;"></i>
+            <h2>مرحباً بك</h2>
+            <p>أدخل اسمك للبدء</p>
+            <input type="text" id="usernameInput" placeholder="اسمك" class="form-input">
+            <button onclick="saveUsername()" class="btn-primary">دخول</button>
         </div>
     </div>
 
-    <!-- رسائل التنبيه -->
     <div id="messageContainer"></div>
-
     <script type="module" src="script.js"></script>
 </body>
 </html>
